@@ -45,9 +45,9 @@ htmlcov/
 .tox/
 
 # Project-specific
-# Note: We keep output/ and report/ for reproducibility verification
-# Uncomment these if you want to exclude generated files:
-# output/
+# Exclude large generated files (will be created when running main.py)
+output/
+# Keep report figures (they're smaller)
 # report/
 
 # Large data files (optional - comment out if you want to include data)

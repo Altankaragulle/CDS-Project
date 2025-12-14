@@ -1,5 +1,0 @@
-size_category,distress_rate,distressed_count,total_count
-Small (<$1B),,0.0,0
-Medium ($1-5B),0.1981981981981982,660.0,3330
-Large ($5-20B),0.19498278406296113,1982.0,10165
-Very Large (>$20B),0.21170010845986983,3123.0,14752

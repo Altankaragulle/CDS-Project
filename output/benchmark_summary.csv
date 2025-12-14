@@ -1,2 +1,0 @@
-best_model,best_auc,best_f1,best_baseline,baseline_auc,improvement_auc
-LightGBM,0.6343670927692274,0.3069466882067851,Majority Class,0.5,0.13436709276922743
