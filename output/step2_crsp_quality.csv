@@ -1,0 +1,4 @@
+Variable,Total,Missing,Missing_Pct,Outliers,Valid,Quality,Dataset
+PRCCM,116865,2847,2.44,190,114018,Good,CRSP
+TRT1M,116865,2781,2.38,0,114084,Good,CRSP
+CSHOM,116865,3122,2.67,2111,113743,Good,CRSP

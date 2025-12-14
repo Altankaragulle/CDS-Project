@@ -1,0 +1,3 @@
+model,auc,precision,recall,f1,accuracy
+LSTM_v2,0.49103000706804595,0.0,0.0,0.0,0.961444607125427
+LightGBM,0.4847651481076913,,0.0,,

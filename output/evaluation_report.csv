@@ -1,0 +1,8 @@
+metric,value,description
+ROC AUC,0.6271,Area under ROC curve
+Average Precision,0.3181,Area under PR curve
+Top Feature,cds_spread_lag1,Most important feature
+Top Feature Importance,82,Importance score
+Best Year (AUC),2021 (0.647),Year with best AUC
+Worst Year (AUC),2022 (0.604),Year with worst AUC
+AUC Std Dev,0.0243,AUC stability across years

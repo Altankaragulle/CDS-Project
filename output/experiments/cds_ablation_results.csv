@@ -1,0 +1,5 @@
+model,features,feature_type,test_auc,test_recall,test_precision,test_f1,description,improvement_vs_naive
+Naive CDS Threshold,1,CDS only,0.4018428671834469,0.7771701982228298,0.20850907757197873,0.32880277617119724,"Simple rule: if CDS > threshold, predict distress",0.0
+Logistic Regression (CDS-only),1,CDS only,0.5985114648056024,0.7710184552289815,0.25156110615521854,0.3793509332436523,Linear model with CDS features,48.941666925836834
+LightGBM (CDS-only),1,CDS only,0.5994395447849361,0.7074504442925496,0.26751098475058155,0.3882220555138785,Tree model with CDS features only,49.17262286785436
+LightGBM (Full Features),39,All features,0.6677156976456025,0.6910457963089542,0.3223852040816326,0.43966079582517936,Full model with accounting + market + CDS,66.16338180286296

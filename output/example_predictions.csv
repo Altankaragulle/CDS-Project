@@ -1,0 +1,7 @@
+category,company,date,true_label,predicted_prob,predicted_label
+True Positive (Correctly Predicted Distress),Advanced Micro Devices,2022-03-31,1,0.5062334537506104,1
+True Positive (Correctly Predicted Distress),Honeywell International Inc.,2021-06-30,1,0.5628464221954346,1
+False Positive (False Alarm),American Airlines Group Inc.,2023-12-31,0,0.5000316500663757,1
+False Positive (False Alarm),Abbott Laboratories,2021-09-30,0,0.5080815553665161,1
+False Negative (Missed Distress),American Airlines Group Inc.,2021-06-30,1,0.2832935154438019,0
+False Negative (Missed Distress),American Airlines Group Inc.,2021-09-30,1,0.4423242211341858,0

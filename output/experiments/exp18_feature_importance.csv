@@ -1,0 +1,16 @@
+feature,importance,type
+sp500_return_lag1,0.1679053,Macro
+gdp_growth_lag1,0.13996635,Macro
+credit_spread_lag1,0.11573744,Macro
+vix_lag1,0.099179685,Macro
+unemployment_lag1,0.09884692,Macro
+cds_spread_lag1,0.055489592,Firm
+altman_z_score,0.05377385,Firm
+profit_margin,0.047162816,Firm
+debt_to_assets,0.04076487,Firm
+return_1m,0.039317735,Firm
+cds_spread_lag4,0.033368785,Firm
+momentum_12m,0.032646134,Firm
+debt_to_equity,0.029541507,Firm
+volatility_12m,0.023987107,Firm
+momentum_3m,0.022311997,Firm

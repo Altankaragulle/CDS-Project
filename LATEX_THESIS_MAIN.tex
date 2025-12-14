@@ -1,0 +1,125 @@
+\documentclass[12pt,a4paper]{article}
+
+% ============================================================================
+% PACKAGES
+% ============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage[numbers,sort&compress]{natbib}
+
+% ============================================================================
+% PAGE SETUP
+% ============================================================================
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+\onehalfspacing
+
+% Figure path
+\graphicspath{{./report/figures/}{./report/figures/experiments/}}
+
+% Caption formatting
+\captionsetup{font=small, labelfont=bf, format=plain, justification=justified, singlelinecheck=false}
+
+% Hyperref setup
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue, bookmarksnumbered=true, pdfstartview=FitH}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Section formatting
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+
+% ============================================================================
+% TITLE PAGE
+% ============================================================================
+\title{
+    \textbf{\Large Predicting Corporate Distress with Machine Learning:} \\
+    \vspace{0.3cm}
+    \textbf{\Large Beyond Naive CDS Heuristics} \\
+    \vspace{1cm}
+    \large Master's Thesis \\
+    Corporate Data Science -- Advanced Programming
+}
+
+\author{
+    Altan Karagulle \\
+    \small Supervisor: TA Francesco \\
+    \small [University Name] \\
+    \small \today
+}
+
+\date{}
+
+% ============================================================================
+% DOCUMENT
+% ============================================================================
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\newpage
+\tableofcontents
+\listoffigures
+\listoftables
+\newpage
+
+% ============================================================================
+% ABSTRACT
+% ============================================================================
+\begin{abstract}
+\noindent
+This thesis investigates whether machine learning models can predict corporate distress more accurately than simple heuristics based on credit default swap (CDS) spreads. We manually curate a dataset of approximately 300 US firms (2010--2023) by integrating Compustat fundamentals, CRSP market data, and Markit CDS spreads through a systematic 15-step pipeline. We define distress as a CDS spread widening of at least 50 basis points or 25\% over a 12-month horizon, aligning with Basel III risk management practices.
+
+Our incremental value analysis reveals that machine learning adds substantial predictive power: a naive ``high CDS = high risk'' rule achieves 0.471 AUC, while ML trained on CDS features alone improves to 0.550 AUC (+16.8\%). Incorporating accounting and market fundamentals further increases performance to 0.568 AUC (+20.6\% total improvement). The final optimized model achieves 0.658 AUC on the held-out test set (2021--2023), representing a 39.7\% improvement over the naive baseline.
+
+We validate robustness through 5-fold time-series cross-validation, demonstrating mean AUC of 0.542 with regime-dependent performance. Probability calibration via isotonic regression reduces expected calibration error to 0.014, making predictions suitable for real-world capital allocation. Our results demonstrate that ML extracts significantly more predictive signal from credit data than practitioners' simple rules, with business impact including 47\% fewer false alarms and more efficient resource allocation.
+
+\vspace{0.5cm}
+\noindent \textbf{Keywords:} Corporate distress prediction, Credit default swaps, Machine learning, LightGBM, Probability calibration, Incremental value analysis
+\end{abstract}
+
+\newpage
+
+% ============================================================================
+% Include section files
+% ============================================================================
+\input{sections/01_introduction}
+\input{sections/02_literature}
+\input{sections/03_data}
+\input{sections/04_variables}
+\input{sections/05_methodology}
+\input{sections/06_experiments}
+\input{sections/07_calibration}
+\input{sections/08_evaluation}
+\input{sections/09_limitations}
+\input{sections/10_conclusion}
+
+% ============================================================================
+% BIBLIOGRAPHY
+% ============================================================================
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

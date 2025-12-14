@@ -1,0 +1,18 @@
+Model/Experiment,AUC,Recall,Precision,F1,Notes
+Baseline Models:,,,,,
+  LightGBM,0.6481,37.7%,37.3%,0.375,Best baseline
+  XGBoost,0.6264,30.3%,34.9%,0.325,
+  Random Forest,0.6152,21.3%,37.1%,0.270,
+  Logistic Regression,0.5999,48.0%,29.2%,0.363,Highest recall
+,,,,,
+Optimization Journey:,,,,,
+  Exp 5: + Temporal Features,0.6736,50.6%,35.5%,0.417,+3.05% AUC improvement
+  Exp 6: + Optimal Threshold,0.6677,69.1%,32.2%,0.440,"Catches 1,011/1,463 distressed"
+  Exp 13: + Calibration (Isotonic),0.6622,-,-,-,ECE = 1.4%
+,,,,,
+Validation:,,,,,
+  Exp 14: Cross-Validation (5-fold),0.560 ± 0.056,38.8% ± 16.4%,23.2% ± 14.0%,0.234 ± 0.102,Varies with market conditions
+  Exp 15: LSTM Baseline,0.5000 (vs 0.6497),0.0%,0.0%,0.000,Deep learning fails
+,,,,,
+FINAL MODEL:,,,,,
+  LightGBM + Temporal + Threshold,0.6677,69.1%,32.2%,0.440,✅ RECOMMENDED
