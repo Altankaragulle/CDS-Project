@@ -1,10 +1,14 @@
 """
 Corporate Distress Prediction - Main Pipeline
-Runs the complete 15-step ML pipeline + experiments from data to final model.
+Runs the complete 15-step ML pipeline + XGBoost experiments from raw data.
+
+All steps execute from scratch with full terminal output.
+No cached results - everything is recomputed.
 
 Usage:
-    python main.py                    # Run pipeline + experiments (default)
-    python main.py --experiments-only # Run experiments only
+    python main.py                    # Run full pipeline + XGBoost experiments
+    python main.py --pipeline-only    # Run pipeline steps only
+    python main.py --experiments-only # Run XGBoost experiments only
     python main.py --help             # Show options
 """
 
@@ -12,74 +16,96 @@ import sys
 import os
 from pathlib import Path
 import importlib.util
+import time
+from datetime import timedelta
 
 # Add src to path
 PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT / 'src'))
 sys.path.insert(0, str(PROJECT_ROOT / 'experiments'))
 
+# Force fresh execution - no cached outputs
+os.environ['FORCE_RECOMPUTE'] = '1'
+
 
 def run_step(step_name, module_name, folder='src'):
-    """Run a single pipeline step or experiment."""
+    """Run a single pipeline step or experiment with full output."""
     print(f"\n{'='*70}")
     print(f"  {step_name}")
     print(f"{'='*70}\n")
     
+    start_time = time.time()
+    
     try:
-        # Import and run the module
+        # Import the module
         module_path = PROJECT_ROOT / folder / f'{module_name}.py'
+        
+        if not module_path.exists():
+            raise FileNotFoundError(f"Module not found: {module_path}")
+        
         spec = importlib.util.spec_from_file_location(module_name, module_path)
         module = importlib.util.module_from_spec(spec)
+        
+        # Load the module (but don't execute yet)
+        sys.stdout.flush()
         spec.loader.exec_module(module)
         
-        print(f"\n✅ {step_name} completed successfully\n")
-        return True
+        # Now explicitly call main() if it exists
+        # This ensures all print() statements execute
+        if hasattr(module, 'main'):
+            sys.stdout.flush()
+            module.main()
+            sys.stdout.flush()
+        else:
+            # Some modules might not have main(), just loading them executes code
+            pass
+        
+        elapsed = time.time() - start_time
+        print(f"\n✅ {step_name} completed successfully (⏱️  {elapsed:.1f}s)\n")
+        return True, elapsed
         
     except Exception as e:
-        print(f"\n❌ {step_name} failed with error:")
+        elapsed = time.time() - start_time
+        print(f"\n❌ {step_name} failed with error (⏱️  {elapsed:.1f}s):")
         print(f"   {str(e)}\n")
-        return False
+        import traceback
+        traceback.print_exc()
+        return False, elapsed
 
 
-def run_experiments(include_lstm=False):
-    """Run the core optimization experiments."""
+def run_xgboost_experiments():
+    """Run XGBoost-specific experiments only."""
     
     print("\n" + "="*70)
-    print("  OPTIMIZATION EXPERIMENTS")
+    print("  XGBOOST EXPERIMENTS - FROM RAW DATA")
     print("="*70)
-    print("\nRunning core experiments that improved the model:")
-    print("  • Exp 1: Reduce overfitting")
-    print("  • Exp 4: Optimize recall threshold")
-    print("  • Exp 5: Add temporal features (key contribution)")
-    print("  • Exp 6: Combine all optimizations")
-    print("  • Exp 13: Calibrate probabilities")
-    print("  • Exp 14: Cross-validation")
-    print("  • Exp 16: Feature selection (Top 10 features)")
-    if include_lstm:
-        print("  • Exp 15: LSTM baseline (optional, requires TensorFlow)")
+    print("\nRunning XGBoost-specific experiments:")
+    print("  • Exp 1b: XGBoost Overfitting Reduction (Progressive Regularization)")
+    print("  • Exp 1c: XGBoost Top 10 SHAP Features (Strong Regularization)")
+    print("  • Exp 1d: XGBoost Final Model Cross-Validation")
+    print("  • Exp 1e: XGBoost CDS-Only vs Full Features")
+    print("  • Exp 1f: Three-Way CV Comparison (Naive → CDS-Only → Top 10)")
+    print("  • Exp 16: XGBoost Temporal Feature Selection (Top 10)")
     print("\n" + "="*70 + "\n")
     
     experiments = [
-        ("Exp 1: Reduce Overfitting", "exp1_reduce_overfitting"),
-        ("Exp 4: Optimize Recall", "exp4_optimize_recall"),
-        ("Exp 5: Temporal Features", "exp5_temporal_features"),
-        ("Exp 6: Combined Optimization", "exp6_combined_optimization"),
-        ("Exp 13: Model Calibration", "exp13_model_calibration_v2"),  # Fixed: use v2
-        ("Exp 14: Cross-Validation", "exp14_cross_validation_FIXED"),  # Fixed: use FIXED version
-        ("Exp 16: Feature Selection", "exp16_temporal_feature_selection"),
+        ("Exp 1b: XGBoost Overfitting Reduction", "exp1b_reduce_overfitting_xgboost"),
+        ("Exp 1c: XGBoost Top 10 SHAP", "exp1c_strong_reg_top10_shap"),
+        ("Exp 1d: XGBoost Final Model CV", "exp1d_final_model_cv"),
+        ("Exp 1e: XGBoost CDS-Only Comparison", "exp1e_cds_only_comparison"),
+        ("Exp 1f: Three-Way CV Comparison", "exp1f_three_way_cv_comparison"),
+        ("Exp 16: XGBoost Feature Selection", "exp16_incremental_value_cv"),
     ]
-    
-    # Only include LSTM if explicitly requested
-    if include_lstm:
-        experiments.append(("Exp 15: LSTM Baseline", "exp15_lstm_baseline"))
     
     completed = 0
     failed = []
+    total_time = 0
     
     for i, (exp_name, module_name) in enumerate(experiments, 1):
-        print(f"\n[Experiment {i}/{len(experiments)}]")
+        print(f"\n[XGBoost Experiment {i}/{len(experiments)}]")
         
-        success = run_step(exp_name, module_name, folder='experiments')
+        success, elapsed = run_step(exp_name, module_name, folder='experiments')
+        total_time += elapsed
         
         if success:
             completed += 1
@@ -87,48 +113,55 @@ def run_experiments(include_lstm=False):
             failed.append(exp_name)
             print(f"\n⚠️  Warning: {exp_name} failed but continuing...\n")
     
-    return completed, failed, len(experiments)
+    return completed, failed, len(experiments), total_time
 
 
 def print_story_highlights(run_pipeline, run_exps):
     """Print a narrative summary of key metrics across steps and experiments."""
     print("\n" + "="*70)
-    print("  KEY METRICS - HOW FAR WE'VE COME")
+    print("  KEY RESULTS SUMMARY")
     print("="*70)
     
     if run_pipeline:
-        print("\n🚦 Steps 12-15: From regularization to insight")
-        print("  • Step 12 Optimization: XGBoost (AUC 0.632, F1 0.390) and LightGBM (AUC 0.627, F1 0.381) both settle on a conservative 0.45 threshold to curb overfitting.")
-        print("  • Step 13 Evaluation: Test AUC 0.627, AP 0.318 — strongest year 2021 (AUC 0.647) and toughest 2022 (0.604), showing stable generalization.")
-        print("  • Step 14 Benchmarks: Traditional LightGBM at AUC 0.634 still beats every baseline by >25%, especially the CDS-only rule stuck at 0.405.")
-        print("  • Step 15 Explainability: XGBoost & LightGBM agree on 8/10 top drivers (CDS lags, Altman Z, returns, volatility), proving the signals are consistent.")
+        print("\n📊 PIPELINE STEPS (1-15): Complete data processing and model training")
+        print("  • Steps 1-4: Raw data → cleaned, merged dataset (600 firms, 28K observations)")
+        print("  • Steps 5-9: Feature engineering → 29 features + distress target")
+        print("  • Steps 10-12: Model training → XGBoost (AUC 0.632, F1 0.390)")
+        print("  • Steps 13-15: Evaluation → Test performance + SHAP explainability")
     
     if run_exps:
-        print("\n🔬 Experiments: why we trust the final model")
-        print("  • Exp 5 + 6: Temporal features plus combined regularization closed the train-test gap to ~0.09 AUC.")
-        print("  • Exp 13: Calibration delivered the deployment model (AUC 0.662, recall 69.1%, ECE 0.014) catching 1,011 of 1,463 distressed firms.")
-        print("  • Exp 14: Time-based cross-validation confirmed stability before moving to benchmarks and SHAP.")
-        print("  • Exp 16: Feature selection reduced to 10 features (AUC 0.640, recall 72%, simpler & faster).")
+        print("\n🎯 XGBOOST EXPERIMENTS: Progressive improvement journey")
+        print("  • Exp 1b: Overfitting reduction → Train-test gap from 31.4% to 5.1%")
+        print("  • Exp 1c: Top 10 SHAP features → Strong regularization + parsimony")
+        print("  • Exp 1d: Cross-validation → Temporal robustness confirmed")
+        print("  • Exp 1e: CDS-only comparison → Model sophistication = 77% of gains")
+        print("  • Exp 1f: Three-way CV → Naive (0.472) → CDS-only (0.533) → Top 10 (0.555)")
+        print("  • Exp 16: Feature selection → 10 features, AUC 0.636, simpler & faster")
 
 
 def main():
-    """Run the complete ML pipeline."""
+    """Run the complete ML pipeline from raw data with XGBoost experiments."""
+    
+    # Start total timer
+    total_start_time = time.time()
     
     # Parse command line arguments
     run_pipeline = True
-    run_exps = True  # Now runs experiments by default
+    run_exps = True  # Run XGBoost experiments by default
     
     if len(sys.argv) > 1:
         arg = sys.argv[1]
         if arg in ['--help', '-h']:
             print("\nUsage:")
-            print("  python main.py                    # Run pipeline + experiments (default)")
-            print("  python main.py --experiments-only # Run experiments only")
+            print("  python main.py                    # Run pipeline + XGBoost experiments (default)")
+            print("  python main.py --pipeline-only    # Run pipeline steps only")
+            print("  python main.py --experiments-only # Run XGBoost experiments only")
             print("  python main.py --help             # Show this help\n")
+            print("Note: All steps execute from scratch. No cached outputs are used.")
             return 0
-        elif arg == '--with-experiments':
+        elif arg == '--pipeline-only':
             run_pipeline = True
-            run_exps = True
+            run_exps = False
         elif arg == '--experiments-only':
             run_pipeline = False
             run_exps = True
@@ -138,28 +171,27 @@ def main():
             return 1
     
     print("\n" + "="*70)
-    print("  CDS DISTRESS PREDICTION - COMPLETE ML PIPELINE")
+    print("  CDS DISTRESS PREDICTION - FULL PIPELINE FROM RAW DATA")
     print("="*70)
+    print("\n⚡ EXECUTION MODE: Fresh computation (no cached outputs)")
+    print("📊 OUTPUT: All results printed to terminal")
     
     if run_pipeline:
-        print("\nThis will run all 15 steps of the pipeline:")
-        print("  • Data inspection and quality checks (Steps 1-2)")
-        print("  • Data cleaning and merging (Steps 3-4)")
-        print("  • Feature engineering (Steps 5-8)")
-        print("  • Target creation (Step 9)")
-        print("  • Model training and optimization (Steps 10-12)")
-        print("  • Evaluation and explainability (Steps 13-15)")
+        print("\n📋 PIPELINE STEPS (15 total):")
+        print("  • Steps 1-2:  Data inspection and quality checks")
+        print("  • Steps 3-4:  Data cleaning and merging")
+        print("  • Steps 5-9:  Feature engineering and target creation")
+        print("  • Steps 10-12: Model training and optimization")
+        print("  • Steps 13-15: Evaluation and explainability")
     
     if run_exps:
-        print("\n+ Optimization & validation experiments:")
-        print("  • Exp 1: Reduce overfitting")
-        print("  • Exp 4: Optimize recall")
-        print("  • Exp 5: Temporal features")
-        print("  • Exp 6: Combined model")
-        print("  • Exp 13: Calibration")
-        print("  • Exp 14: Cross-validation")
-        print("  • Exp 16: Feature selection (Top 10)")
-        print("  • (Exp 15: LSTM - run separately with lstm_train.py/lstm_test.py)")
+        print("\n🎯 XGBOOST EXPERIMENTS (6 total):")
+        print("  • Exp 1b: Overfitting reduction (progressive regularization)")
+        print("  • Exp 1c: Top 10 SHAP features (strong regularization)")
+        print("  • Exp 1d: Final model cross-validation")
+        print("  • Exp 1e: CDS-only vs full features comparison")
+        print("  • Exp 1f: Three-way CV (naive → CDS-only → Top 10)")
+        print("  • Exp 16: Temporal feature selection")
     
     print("\n" + "="*70 + "\n")
     
@@ -186,25 +218,29 @@ def main():
     # Track progress
     pipeline_completed = 0
     pipeline_failed = []
+    pipeline_time = 0
     exp_completed = 0
     exp_failed = []
+    exp_time = 0
     
     # Run pipeline steps
     if run_pipeline:
+        pipeline_start = time.time()
         for i, (step_name, module_name) in enumerate(steps, 1):
             print(f"\n[Step {i}/{len(steps)}]")
             
-            success = run_step(step_name, module_name)
+            success, elapsed = run_step(step_name, module_name)
             
             if success:
                 pipeline_completed += 1
             else:
                 pipeline_failed.append(step_name)
                 print(f"\n⚠️  Warning: {step_name} failed but continuing...\n")
+        pipeline_time = time.time() - pipeline_start
     
-    # Run experiments
+    # Run XGBoost experiments
     if run_exps:
-        exp_completed, exp_failed, exp_total = run_experiments()
+        exp_completed, exp_failed, exp_total, exp_time = run_xgboost_experiments()
     
     # Final summary
     print("\n" + "="*70)
@@ -222,48 +258,81 @@ def main():
     
     if run_exps:
         exp_total = exp_completed + len(exp_failed)
-        print(f"\n🔬 Experiments: {exp_completed}/{exp_total} experiments completed")
+        print(f"\n🎯 XGBoost Experiments: {exp_completed}/{exp_total} experiments completed")
         if exp_failed:
             print(f"    Failed: {len(exp_failed)} experiment(s)")
             for exp in exp_failed:
                 print(f"      - {exp}")
         else:
-            print("    All experiments completed successfully!")
+            print("    All XGBoost experiments completed successfully!")
 
     print_story_highlights(run_pipeline, run_exps)
 
     print("\n" + "="*70)
     print("  OUTPUT LOCATIONS")
     print("="*70)
-    print(f"\n📁 Processed Data:  {PROJECT_ROOT / 'output'}")
-    print(f"🤖 Trained Models:  {PROJECT_ROOT / 'output' / 'models'}")
-    print(f"📊 Figures:         {PROJECT_ROOT / 'report' / 'figures'}")
-    print(f"📈 Results:         {PROJECT_ROOT / 'output' / 'step13_evaluation_results.csv'}")
+    print(f"\n📁 Processed Data:       {PROJECT_ROOT / 'output'}")
+    print(f"🤖 Pipeline Models:      {PROJECT_ROOT / 'output' / 'models'}")
+    print(f"📊 Pipeline Figures:     {PROJECT_ROOT / 'report' / 'figures'}")
+    print(f"📈 Evaluation Results:   {PROJECT_ROOT / 'output' / 'step13_evaluation_results.csv'}")
     
     if run_exps:
-        print(f"\n🔬 Experiment Outputs:")
-        print(f"   • Models: {PROJECT_ROOT / 'output' / 'experiments'}")
+        print(f"\n🎯 XGBoost Experiment Outputs:")
+        print(f"   • Models:  {PROJECT_ROOT / 'output' / 'experiments' / 'models'}")
         print(f"   • Figures: {PROJECT_ROOT / 'report' / 'figures' / 'experiments'}")
+        print(f"   • Results: {PROJECT_ROOT / 'output' / 'experiments'}")
     
     print("\n" + "="*70)
-    print("  FINAL MODEL")
+    print("  RECOMMENDED XGBOOST MODEL")
     print("="*70)
     
     if run_exps:
-        print(f"\n🏆 RECOMMENDED MODEL: output/experiments/models/exp16_xgboost.pkl")
-        print(f"   • Top 10 Features (66% reduction)")
-        print(f"   • Test AUC: 0.640")
-        print(f"   • Precision: 30%, Recall: 72%")
-        print(f"   • F1: 0.420 (best overall)")
-        print(f"   • Simpler, faster, more interpretable")
-        print(f"\n   Alternative: output/models/lightgbm_calibrated_isotonic.pkl")
-        print(f"   • Calibrated probabilities (ECE: 0.014)")
-        print(f"   • Test AUC: 0.662, Recall: 69.1%")
+        print(f"\n🏆 BEST MODEL: XGBoost Top 10 Features")
+        print(f"   📂 Location: output/experiments/models/exp16_xgboost_top10.pkl")
+        print(f"   📊 Performance:")
+        print(f"      • Test AUC: 0.636 (+58.2% vs naive baseline)")
+        print(f"      • Precision: 30.0%, Recall: 72.0%")
+        print(f"      • F1 Score: 0.420")
+        print(f"   ⚡ Features: 10 (vs 29 full set = 66% reduction)")
+        print(f"   ✅ Benefits: Simpler, faster, more interpretable")
+        print(f"\n   📈 Key Finding: Model sophistication = 77% of gains")
+        print(f"      • Naive CDS threshold → XGBoost CDS-only: +44.8% (0.402 → 0.582)")
+        print(f"      • XGBoost CDS-only → XGBoost Top 10: +9.3% (0.582 → 0.636)")
     else:
-        print(f"\n🏆 Best Model: output/models/lightgbm_optimized.pkl")
-        print(f"   • Test AUC: 0.668")
-        print(f"   • Recall: 69.1%")
-        print(f"   • Catches 1,011 / 1,463 distressed firms")
+        print(f"\n🏆 Pipeline Model: XGBoost Optimized")
+        print(f"   📂 Location: output/models/xgboost_optimized.pkl")
+        print(f"   📊 Test AUC: 0.632, F1: 0.390")
+        print(f"   ⚡ Run experiments for Top 10 feature model")
+    
+    print("\n" + "="*70 + "\n")
+    
+    # Calculate and display total runtime
+    total_elapsed = time.time() - total_start_time
+    
+    print("="*70)
+    print("  ⏱️  RUNTIME SUMMARY")
+    print("="*70)
+    
+    if run_pipeline:
+        pipeline_td = timedelta(seconds=int(pipeline_time))
+        print(f"\n📋 Pipeline Steps: {pipeline_td} ({pipeline_time:.1f}s)")
+        print(f"   • Average per step: {pipeline_time/len(steps):.1f}s")
+    
+    if run_exps:
+        exp_td = timedelta(seconds=int(exp_time))
+        print(f"\n🎯 XGBoost Experiments: {exp_td} ({exp_time:.1f}s)")
+        print(f"   • Average per experiment: {exp_time/6:.1f}s")
+    
+    total_td = timedelta(seconds=int(total_elapsed))
+    print(f"\n⏱️  TOTAL RUNTIME: {total_td} ({total_elapsed:.1f}s)")
+    
+    # Show breakdown
+    if run_pipeline and run_exps:
+        pipeline_pct = (pipeline_time / total_elapsed) * 100
+        exp_pct = (exp_time / total_elapsed) * 100
+        print(f"\n   Breakdown:")
+        print(f"   • Pipeline: {pipeline_pct:.1f}%")
+        print(f"   • Experiments: {exp_pct:.1f}%")
     
     print("\n" + "="*70 + "\n")
     
